@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Recuerdos Eternos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --negro: #080810;
+            --rojo: #7a1c2e;
+            --oro: #e8c97a;
+            --oro-claro: #f5e8b8;
+            --blanco: #fdf8f2;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { min-height: 100%; }
+        body {
+            background: var(--negro);
+            overflow: hidden;
+            font-family: 'Lato', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; min-height: 100dvh; width: 100%;
+            overflow-x: hidden; overflow-y: auto;
+            padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+        }
+
+        /* FONDO */
+        .fondo {
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 15% 20%, rgba(122,28,46,0.5) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 80%, rgba(90,20,50,0.4) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 50%, #0d0a14 0%, #080810 100%);
+            animation: pulsarFondo 8s ease-in-out infinite alternate;
+        }
+        @keyframes pulsarFondo { 0% { filter: brightness(1); } 100% { filter: brightness(1.2); } }
+
+        /* PARTÍCULAS */
+        .particulas { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+        .particula {
+            position: absolute; width: 2px; height: 2px;
+            background: var(--oro); border-radius: 50%; opacity: 0;
+            animation: flotar linear infinite;
+        }
+        @keyframes flotar {
+            0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+            10%  { opacity: 0.8; }
+            90%  { opacity: 0.4; }
+            100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+        }
+
+        /* PANTALLA INICIO */
+        #start-screen {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center; padding: 30px;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        #start-screen.oculto { opacity: 0; transform: scale(1.05); pointer-events: none; }
+        .titulo-inicio {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(3rem, 12vw, 5.5rem);
+            font-weight: 300; font-style: italic;
+            color: var(--oro-claro); line-height: 1; letter-spacing: 2px;
+            text-shadow: 0 0 60px rgba(232,201,122,0.3); margin-bottom: 8px;
+        }
+        .subtitulo-inicio {
+            font-size: 0.75rem; letter-spacing: 6px;
+            color: rgba(232,201,122,0.5); text-transform: uppercase; margin-bottom: 50px;
+        }
+        .linea-deco {
+            width: 80px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--oro), transparent);
+            margin: 0 auto 50px;
+        }
+        .btn-abrir {
+            padding: 16px 55px; font-family: 'Lato', sans-serif;
+            font-size: 0.75rem; letter-spacing: 5px; text-transform: uppercase;
+            cursor: pointer; background: transparent;
+            border: 1px solid rgba(232,201,122,0.5); color: var(--oro);
+            position: relative; overflow: hidden;
+            transition: color 0.4s ease, border-color 0.4s ease;
+        }
+        .btn-abrir::before {
+            content: ''; position: absolute; inset: 0;
+            background: var(--rojo); transform: scaleX(0);
+            transform-origin: left; transition: transform 0.4s ease; z-index: -1;
+        }
+        .btn-abrir:hover::before { transform: scaleX(1); }
+        .btn-abrir:hover { border-color: #c0394f; color: var(--oro-claro); }
+        .btn-abrir:active { transform: scale(0.97); }
+
+        /* LIBRO */
+        #libro-wrapper {
+            position: relative; z-index: 10;
+            display: none; flex-direction: column;
+            align-items: center; gap: 14px;
+        }
+        #libro-wrapper.visible { display: flex; }
+        #libro-wrapper { width: 100%; min-height: calc(100vh - 28px); min-height: calc(100dvh - 28px); justify-content: center; }
+
+        .libro-contenedor {
+            width: min(88vw, 480px);
+            height: min(65vh, 680px);
+            height: min(65dvh, 680px);
+            min-height: 300px;
+            position: relative;
+            perspective: 1400px;
+        }
+
+        .hoja {
+            position: absolute; inset: 0;
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            transition: transform 0.75s cubic-bezier(0.645, 0.045, 0.355, 1.000);
+            cursor: pointer;
+        }
+        .hoja.volteada { transform: rotateY(-180deg); }
+
+        .cara {
+            position: absolute; inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            overflow: hidden;
+            box-shadow: 4px 4px 25px rgba(0,0,0,0.7);
+        }
+        .cara-front { background: var(--blanco); }
+        .cara-back  { background: var(--blanco); transform: rotateY(180deg); }
+
+        .cara img { width: 100%; height: 100%; object-fit: contain; display: block; background: #100b12; }
+
+        .caption {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(5,0,12,0.92));
+            color: white; padding: 50px 18px 22px; text-align: center;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1rem, 4vw, 1.4rem);
+            font-style: italic; font-weight: 300; line-height: 1.3;
+        }
+
+        .pagina-cover {
+            width: 100%; height: 100%;
+            background: linear-gradient(145deg, #1a0a14, #0d0510, #12080f);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center; gap: 0;
+        }
+        .cover-titulo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.8rem, 8vw, 3rem);
+            font-style: italic; font-weight: 300;
+            color: var(--oro-claro); text-align: center; line-height: 1.1;
+            text-shadow: 0 0 40px rgba(232,201,122,0.2);
+        }
+        .cover-linea { width: 40px; height: 1px; background: var(--oro); margin: 18px auto; opacity: 0.6; }
+        .cover-sub { font-size: 0.6rem; letter-spacing: 5px; text-transform: uppercase; opacity: 0.45; color: var(--oro-claro); }
+        .cover-corazon { font-size: 1.3rem; margin-top: 25px; animation: latir 1.6s ease-in-out infinite; }
+        @keyframes latir { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        /* CONTROLES */
+        .nav-btns { display: flex; gap: 14px; align-items: center; }
+        .nav-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(232,201,122,0.2);
+            color: var(--oro); font-size: 1rem;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.3s, transform 0.2s;
+            user-select: none;
+        }
+        .nav-btn:hover { background: rgba(122,28,46,0.4); transform: scale(1.05); }
+        .nav-btn:active { transform: scale(0.93); }
+        .pagina-num {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.85rem; font-style: italic;
+            color: rgba(232,201,122,0.4);
+            min-width: 90px; text-align: center; letter-spacing: 1px;
+        }
+
+        /* MÚSICA */
+        .music-bar {
+            display: flex; align-items: center; gap: 11px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(232,201,122,0.15);
+            padding: 9px 16px; backdrop-filter: blur(10px);
+        }
+        .music-btn {
+            background: none; border: none; cursor: pointer;
+            color: var(--oro); font-size: 0.9rem; padding: 4px 5px;
+            line-height: 1; transition: transform 0.2s, color 0.2s;
+        }
+        .music-btn:hover { transform: scale(1.15); color: var(--oro-claro); }
+        .music-nombre {
+            font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase;
+            color: rgba(232,201,122,0.45); min-width: 85px; text-align: center;
+        }
+        .music-prog { width: 65px; height: 2px; background: rgba(232,201,122,0.15); cursor: pointer; }
+        .music-prog-fill { height: 100%; background: var(--oro); width: 0%; transition: width 0.5s linear; }
+        button { font: inherit; }
+        button:focus-visible { outline: 2px solid var(--oro-claro); outline-offset: 4px; }
+        @media (max-width: 480px) {
+            #libro-wrapper { gap: 12px; }
+            .libro-contenedor { width: min(92vw, 430px); height: min(62dvh, 620px); min-height: 280px; }
+            .nav-btn { width: 44px; height: 44px; }
+            .music-bar { gap: 8px; padding: 10px 11px; width: min(94vw, 390px); justify-content: space-between; }
+            .music-nombre { min-width: 72px; letter-spacing: 1.5px; }
+            .music-prog { flex: 1; min-width: 35px; }
+            .caption { padding: 42px 12px 16px; }
+            .subtitulo-inicio { letter-spacing: 4px; margin-bottom: 35px; }
+            .linea-deco { margin-bottom: 35px; }
+        }
+        @media (max-height: 560px) {
+            #libro-wrapper { flex-direction: row; gap: 18px; }
+            .libro-contenedor { width: min(48vw, 420px); height: min(84dvh, 500px); min-height: 220px; }
+            #libro-wrapper > div:last-child { gap: 8px !important; }
+            .music-bar { flex-wrap: wrap; justify-content: center; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="fondo"></div>
+<div class="particulas" id="particulas"></div>
+
+<!-- INICIO -->
+<div id="start-screen">
+    <div class="titulo-inicio">Recuerdos<br>Eternos</div>
+    <div class="subtitulo-inicio">un álbum para ti</div>
+    <div class="linea-deco"></div>
+    <button class="btn-abrir" onclick="iniciar()">Abrir Álbum</button>
+</div>
+
+<!-- LIBRO -->
+<div id="libro-wrapper">
+    <div class="libro-contenedor" id="libro"></div>
+
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div class="nav-btns">
+            <button class="nav-btn" type="button" aria-label="Página anterior" onclick="paginaAnterior()">&#9664;</button>
+            <div class="pagina-num" id="pag-num">Portada</div>
+            <button class="nav-btn" type="button" aria-label="Página siguiente" onclick="paginaSiguiente()">&#9654;</button>
+        </div>
+        <div class="music-bar">
+            <button class="music-btn" type="button" aria-label="Canción anterior" onclick="anteriorCancion()">&#9664;</button>
+            <button class="music-btn" type="button" id="btn-play" aria-label="Reproducir" onclick="togglePlay()">&#9654;</button>
+            <button class="music-btn" type="button" aria-label="Canción siguiente" onclick="siguienteCancion()">&#9654;</button>
+            <div class="music-nombre" id="nombre-cancion">Canción 1</div>
+            <div class="music-prog" onclick="saltarA(event)">
+                <div class="music-prog-fill" id="prog-fill"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<audio id="audio-player" preload="auto"></audio>
+
+<script>
+    const frases = [
+        "En Tumbes 🏖️",
+        "Con tu papito ❤️",
+        "Con tu mamita ❤️",
+        "Con chirri 😁",
+        "Con los Ruiz 🌳",
+        "Con los Bolognini 🦁",
+        "En la conmemoración con Gaelito por ahí 🤣",
+        "En el Starbucks (Strawberry Acai Frozen Refresher) 😂",
+        "En el Sunset 🌅",
+        "Y una imagen colada de nosotros muy jóvenes 😁"
+    ];
+    const canciones = [
+        { src: "cancion1.m4a.m4a", nombre: "Canción 1" },
+        { src: "cancion2.m4a.m4a", nombre: "Canción 2" },
+        { src: "cancion3.m4a.m4a", nombre: "Canción 3" }
+    ];
+
+    // Partículas
+    (function() {
+        const cont = document.getElementById('particulas');
+        for (let i = 0; i < 28; i++) {
+            const p = document.createElement('div');
+            p.className = 'particula';
+            p.style.left = Math.random() * 100 + 'vw';
+            const s = (Math.random() * 2 + 1) + 'px';
+            p.style.width = p.style.height = s;
+            p.style.animationDuration = (Math.random() * 12 + 8) + 's';
+            p.style.animationDelay = (Math.random() * 12) + 's';
+            cont.appendChild(p);
+        }
+    })();
+
+    // Estado del libro
+    let paginaActual = 0;
+    let totalHojas = 0;
+    let hojas = [];
+    let animando = false;
+
+    function crearFoto(num) {
+        const d = document.createElement('div');
+        d.style.cssText = 'width:100%;height:100%;position:relative;';
+        d.innerHTML = `
+            <img src="foto${num}.jpg.jpg" alt="${frases[num-1]}"
+                onerror="this.parentElement.style.background='#1a0a14';this.style.display='none'">
+            <div class="caption">${frases[num-1]}</div>`;
+        return d;
+    }
+
+    function crearCover(titulo, sub) {
+        const d = document.createElement('div');
+        d.className = 'pagina-cover';
+        d.innerHTML = `
+            <div class="cover-titulo">${titulo}</div>
+            <div class="cover-linea"></div>
+            <div class="cover-sub">${sub}</div>
+            <div class="cover-corazon">❤️</div>`;
+        return d;
+    }
+
+    function construirLibro() {
+        const libro = document.getElementById('libro');
+        libro.innerHTML = '';
+        hojas = [];
+
+        // 12 páginas → 6 hojas
+        const paginas = [
+            crearCover('Nuestros<br>Recuerdos', 'toca ▶ para comenzar'),
+            crearFoto(1), crearFoto(2), crearFoto(3), crearFoto(4),
+            crearFoto(5), crearFoto(6), crearFoto(7), crearFoto(8),
+            crearFoto(9), crearFoto(10),
+            crearCover('Gracias por<br>existir', 'con todo mi amor')
+        ];
+
+        totalHojas = paginas.length / 2; // 6
+
+        for (let i = 0; i < totalHojas; i++) {
+            const hoja = document.createElement('div');
+            hoja.className = 'hoja';
+            hoja.style.zIndex = totalHojas - i;
+
+            const front = document.createElement('div');
+            front.className = 'cara cara-front';
+            front.appendChild(paginas[i * 2]);
+
+            const back = document.createElement('div');
+            back.className = 'cara cara-back';
+            back.appendChild(paginas[i * 2 + 1]);
+
+            hoja.appendChild(front);
+            hoja.appendChild(back);
+            libro.appendChild(hoja);
+            hojas.push(hoja);
+
+            // Click en hoja para avanzar
+            hoja.addEventListener('click', function(e) {
+                const rect = hoja.getBoundingClientRect();
+                const mitad = rect.left + rect.width / 2;
+                if (e.clientX > mitad) paginaSiguiente();
+                else paginaAnterior();
+            });
+        }
+    }
+
+    function actualizarNum() {
+        const el = document.getElementById('pag-num');
+        if (paginaActual === 0) el.textContent = 'Portada';
+        else if (paginaActual >= totalHojas) el.textContent = 'Fin ❤️';
+        else {
+            const n = paginaActual * 2 - 1;
+            el.textContent = `Foto ${Math.min(n, 10)} / 10`;
+        }
+    }
+
+    function paginaSiguiente() {
+        if (animando || paginaActual >= totalHojas) return;
+        animando = true;
+        const h = hojas[paginaActual];
+        h.style.zIndex = totalHojas + 2;
+        setTimeout(() => {
+            h.classList.add('volteada');
+            paginaActual++;
+            actualizarNum();
+            setTimeout(() => { h.style.zIndex = ''; animando = false; }, 760);
+        }, 10);
+    }
+
+    function paginaAnterior() {
+        if (animando || paginaActual <= 0) return;
+        animando = true;
+        paginaActual--;
+        const h = hojas[paginaActual];
+        h.style.zIndex = totalHojas + 2;
+        h.classList.remove('volteada');
+        actualizarNum();
+        setTimeout(() => { h.style.zIndex = ''; animando = false; }, 760);
+    }
+
+    // Swipe táctil
+    let txStart = 0;
+    document.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
+    document.addEventListener('touchend', e => {
+        const diff = txStart - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 45) diff > 0 ? paginaSiguiente() : paginaAnterior();
+    });
+
+    // Audio
+    const player = document.getElementById('audio-player');
+    let idxCancion = 0;
+
+    function cargarCancion(i) {
+        player.src = canciones[i].src;
+        document.getElementById('nombre-cancion').textContent = canciones[i].nombre;
+        document.getElementById('prog-fill').style.width = '0%';
+    }
+    function reproducir() {
+        player.play().then(() => {
+            document.getElementById('btn-play').innerHTML = '&#9646;&#9646;';
+            document.getElementById('btn-play').setAttribute('aria-label', 'Pausar');
+        }).catch(() => {
+            document.getElementById('btn-play').innerHTML = '&#9654;';
+            document.getElementById('btn-play').setAttribute('aria-label', 'Reproducir');
+        });
+    }
+    function pausar() {
+        player.pause();
+        document.getElementById('btn-play').innerHTML = '&#9654;';
+        document.getElementById('btn-play').setAttribute('aria-label', 'Reproducir');
+    }
+    function togglePlay() { player.paused ? reproducir() : pausar(); }
+    function siguienteCancion() { idxCancion = (idxCancion + 1) % canciones.length; cargarCancion(idxCancion); reproducir(); }
+    function anteriorCancion()  { idxCancion = (idxCancion - 1 + canciones.length) % canciones.length; cargarCancion(idxCancion); reproducir(); }
+    function saltarA(e) { if (player.duration) player.currentTime = (e.offsetX / e.currentTarget.offsetWidth) * player.duration; }
+
+    player.ontimeupdate = () => {
+        if (player.duration)
+            document.getElementById('prog-fill').style.width = (player.currentTime / player.duration * 100) + '%';
+    };
+    player.onended = siguienteCancion;
+
+    // Iniciar
+    let yaIniciado = false;
+    function iniciar() {
+        if (yaIniciado) return;
+        yaIniciado = true;
+        document.getElementById('start-screen').classList.add('oculto');
+        document.getElementById('libro-wrapper').classList.add('visible');
+        construirLibro();
+        actualizarNum();
+        cargarCancion(0);
+        reproducir();
+    }
+</script>
+</body>
+</html>
