@@ -102,34 +102,24 @@
         #libro-wrapper { width: 100%; min-height: calc(100vh - 28px); min-height: calc(100dvh - 28px); justify-content: center; }
 
         .libro-contenedor {
-            width: min(88vw, 480px);
-            height: min(65vh, 680px);
-            height: min(65dvh, 680px);
-            min-height: 300px;
+            width: min(92vw, 980px);
+            height: min(68vh, 680px);
+            height: min(68dvh, 680px);
+            min-height: 320px;
             position: relative;
-            perspective: 1400px;
         }
-
-        .hoja {
-            position: absolute; inset: 0;
-            transform-style: preserve-3d;
-            transform-origin: left center;
-            transition: transform 0.75s cubic-bezier(0.645, 0.045, 0.355, 1.000);
-            cursor: pointer;
+        .spread {
+            display: none;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            width: 100%; height: 100%;
         }
-        .hoja.volteada { transform: rotateY(-180deg); }
-
-        .cara {
-            position: absolute; inset: 0;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            overflow: hidden;
-            box-shadow: 4px 4px 25px rgba(0,0,0,0.7);
+        .spread.activa { display: grid; }
+        .pagina-panel {
+            position: relative; min-width: 0; height: 100%; overflow: hidden;
+            background: #100b12; box-shadow: 4px 4px 25px rgba(0,0,0,0.55);
         }
-        .cara-front { background: var(--blanco); }
-        .cara-back  { background: var(--blanco); transform: rotateY(180deg); }
-
-        .cara img { width: 100%; height: 100%; object-fit: contain; display: block; background: #100b12; }
+        .pagina-panel img { width: 100%; height: 100%; object-fit: contain; display: block; background: #100b12; }
 
         .caption {
             position: absolute; bottom: 0; left: 0; right: 0;
@@ -201,7 +191,9 @@
         button:focus-visible { outline: 2px solid var(--oro-claro); outline-offset: 4px; }
         @media (max-width: 480px) {
             #libro-wrapper { gap: 12px; }
-            .libro-contenedor { width: min(92vw, 430px); height: min(62dvh, 620px); min-height: 280px; }
+            .libro-contenedor { width: min(92vw, 500px); height: auto; min-height: 0; }
+            .spread { grid-template-columns: minmax(0, 1fr); gap: 12px; height: auto; }
+            .pagina-panel { height: auto; aspect-ratio: 4 / 3; }
             .nav-btn { width: 44px; height: 44px; }
             .music-bar { gap: 8px; padding: 10px 11px; width: min(94vw, 390px); justify-content: space-between; }
             .music-nombre { min-width: 72px; letter-spacing: 1.5px; }
@@ -211,10 +203,10 @@
             .linea-deco { margin-bottom: 35px; }
         }
         @media (max-height: 560px) {
-            #libro-wrapper { flex-direction: row; gap: 18px; }
-            .libro-contenedor { width: min(48vw, 420px); height: min(84dvh, 500px); min-height: 220px; }
-            #libro-wrapper > div:last-child { gap: 8px !important; }
-            .music-bar { flex-wrap: wrap; justify-content: center; }
+            #libro-wrapper { flex-direction: column; gap: 12px; }
+            .libro-contenedor { width: min(92vw, 760px); height: auto; min-height: 0; }
+            .spread { height: auto; grid-template-columns: minmax(0, 1fr); }
+            .pagina-panel { height: auto; aspect-ratio: 4 / 3; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
@@ -336,71 +328,52 @@
         totalHojas = paginas.length / 2; // 6
 
         for (let i = 0; i < totalHojas; i++) {
-            const hoja = document.createElement('div');
-            hoja.className = 'hoja';
-            hoja.style.zIndex = totalHojas - i;
+            const spread = document.createElement('div');
+            spread.className = 'spread' + (i === 0 ? ' activa' : '');
+            spread.setAttribute('aria-label', `Doble página ${i + 1} de ${totalHojas}`);
 
-            const front = document.createElement('div');
-            front.className = 'cara cara-front';
-            front.appendChild(paginas[i * 2]);
+            for (let lado = 0; lado < 2; lado++) {
+                const panel = document.createElement('div');
+                panel.className = 'pagina-panel';
+                panel.appendChild(paginas[i * 2 + lado]);
+                spread.appendChild(panel);
+            }
 
-            const back = document.createElement('div');
-            back.className = 'cara cara-back';
-            back.appendChild(paginas[i * 2 + 1]);
-
-            hoja.appendChild(front);
-            hoja.appendChild(back);
-            libro.appendChild(hoja);
-            hojas.push(hoja);
-
-            // Click en hoja para avanzar
-            hoja.addEventListener('click', function(e) {
-                const rect = hoja.getBoundingClientRect();
-                const mitad = rect.left + rect.width / 2;
-                if (e.clientX > mitad) paginaSiguiente();
-                else paginaAnterior();
-            });
+            libro.appendChild(spread);
+            hojas.push(spread);
         }
     }
 
     function actualizarNum() {
         const el = document.getElementById('pag-num');
-        if (paginaActual === 0) el.textContent = 'Portada';
-        else if (paginaActual >= totalHojas) el.textContent = 'Fin ❤️';
+        if (paginaActual === 0) el.textContent = 'Portada · Foto 1 / 10';
+        else if (paginaActual === totalHojas - 1) el.textContent = 'Foto 10 / 10 · Fin ❤️';
         else {
-            const n = paginaActual * 2 - 1;
-            el.textContent = `Foto ${Math.min(n, 10)} / 10`;
+            const primeraFoto = paginaActual * 2;
+            el.textContent = `Fotos ${primeraFoto}–${primeraFoto + 1} / 10`;
         }
     }
 
     function paginaSiguiente() {
-        if (animando || paginaActual >= totalHojas) return;
-        animando = true;
-        const h = hojas[paginaActual];
-        h.style.zIndex = totalHojas + 2;
-        setTimeout(() => {
-            h.classList.add('volteada');
-            paginaActual++;
-            actualizarNum();
-            setTimeout(() => { h.style.zIndex = ''; animando = false; }, 760);
-        }, 10);
+        if (paginaActual >= totalHojas - 1) return;
+        hojas[paginaActual].classList.remove('activa');
+        paginaActual++;
+        hojas[paginaActual].classList.add('activa');
+        actualizarNum();
     }
 
     function paginaAnterior() {
-        if (animando || paginaActual <= 0) return;
-        animando = true;
+        if (paginaActual <= 0) return;
+        hojas[paginaActual].classList.remove('activa');
         paginaActual--;
-        const h = hojas[paginaActual];
-        h.style.zIndex = totalHojas + 2;
-        h.classList.remove('volteada');
+        hojas[paginaActual].classList.add('activa');
         actualizarNum();
-        setTimeout(() => { h.style.zIndex = ''; animando = false; }, 760);
     }
 
     // Swipe táctil
     let txStart = 0;
-    document.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
-    document.addEventListener('touchend', e => {
+    document.getElementById('libro').addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
+    document.getElementById('libro').addEventListener('touchend', e => {
         const diff = txStart - e.changedTouches[0].clientX;
         if (Math.abs(diff) > 45) diff > 0 ? paginaSiguiente() : paginaAnterior();
     });
